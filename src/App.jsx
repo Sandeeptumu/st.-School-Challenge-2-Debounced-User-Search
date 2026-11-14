@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { debounce } from "./utils";
+import "./App.css";
 
 function App() {
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -18,76 +18,88 @@ function App() {
     }, []);
 
     useEffect(() => {
-    searchUsers(search);
-    return () => {
-        searchUsers.cancel();
-    };
-}, [search, searchUsers]);
+        searchUsers(search);
 
-    
-useEffect(() => {
-    if (debouncedSearch === "") {
-        setUsers([]);
-        setLoading(false);
-        return;
-    }
-    const controller = new AbortController();
-    async function getUsers() {
-        try {
-            setLoading(true);
+        return () => {
+            searchUsers.cancel();
+        };
+    }, [search, searchUsers]);
+
+    useEffect(() => {
+        if (debouncedSearch.trim() === "") {
+            setUsers([]);
+            setLoading(false);
             setError("");
-            const response = await fetch(
-                `https://dummyjson.com/users/search?q=${debouncedSearch}`,
-                {
-                    signal: controller.signal
+            return;
+        }
+
+        const controller = new AbortController();
+
+        async function getUsers() {
+            try {
+                setLoading(true);
+                setError("");
+
+                const response = await fetch(
+                    `https://dummyjson.com/users/search?q=${debouncedSearch}`,
+                    {
+                        signal: controller.signal
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
                 }
-            );
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
-            }
-            const data = await response.json();
-            setUsers(data.users);
-        } catch (err) {
-            if (err.name !== "AbortError") {
-                setError("Something went wrong");
-            }
-        } finally {
-            if (!controller.signal.aborted) {
-                setLoading(false);
+
+                const data = await response.json();
+                setUsers(data.users);
+
+            } catch (err) {
+                if (err.name !== "AbortError") {
+                    setError("Something went wrong");
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         }
-    }
-    getUsers();
-    return () => {
-        controller.abort();
-    };
-}, [debouncedSearch]);
+
+        getUsers();
+
+        return () => {
+            controller.abort();
+        };
+    }, [debouncedSearch]);
+
     return (
-        <div>
+        <div className="app">
             <h1>User Search</h1>
 
             <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Enter user name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
             />
+
             {search.trim() === "" && <p>Type to search</p>}
+
             <p>You are searching for: {search}</p>
-            
 
             {loading && <p>Loading...</p>}
 
             {error && <p>{error}</p>}
 
             {users.map((user) => (
-                <div key={user.id}>
+                <div className="user" key={user.id}>
                     <h3>{user.firstName} {user.lastName}</h3>
-                    <p>{user.email}</p>
-                    <p>{user.address.city}</p>
+                    <p>Email: {user.email}</p>
+                    <p>City: {user.address.city}</p>
                 </div>
             ))}
         </div>
     );
 }
+
 export default App;
